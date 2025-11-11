@@ -1,0 +1,68 @@
+---
+title: "clean_impc_procedure"
+format: html
+---
+
+
+
+```{r}
+#Importing relevant libraries#
+
+library(stringr)
+library(tidyr)
+library(dplyr)
+library(readr)
+
+setwd('/Users/youssrasemlali/Desktop/DCDMGROUP10/Group10/')
+getwd()
+
+# Read the CSV#
+impc_file <- "/Users/youssrasemlali/Desktop/DCDMGROUP10/Group10/IMPC_procedure.txt"
+proc_df <- read_csv(impc_file, show_col_types = FALSE)
+
+proc_df <- read_csv(impc_file)
+glimpse(proc_df)
+
+```
+
+
+```{r}
+
+# clean and normalise#
+proc_clean <- proc_df %>%
+  mutate(across(everything(), ~ str_trim(.))) %>%
+  # replace empty strings with NA
+  mutate(across(everything(), ~ na_if(., ""))) %>%
+  # remove HTML entities (like &nbsp;)
+  mutate(description = str_replace_all(description, "&nbsp;", " ")) %>%
+  # remove duplicate rows
+  distinct() %>%
+  # standardise TRUE/FALSE values
+  mutate(isMandatory = toupper(isMandatory),
+         isMandatory = ifelse(isMandatory %in% c("TRUE", "T"), TRUE, FALSE)) %>%
+  select(procedure_name = name,
+         description,
+         is_mandatory = isMandatory,
+         impc_parameter_id = impcParameterOrigId)
+
+#Inspecting cleaned data#
+glimpse(proc_clean)
+summary(proc_clean)
+
+#Save to new csv#
+write_csv(proc_clean, "/Users/youssrasemlali/Desktop/DCDMGROUP10/Group10/IMPC_procedure_clean.csv")
+```
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+
+
