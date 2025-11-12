@@ -43,6 +43,12 @@ data <- read.csv(file.path(folder_path, "IMPC_noDuplicates.csv"), stringsAsFacto
 # Creating copy for cleaning#
 cleaned_data <- data
 
+# Standardise cases#
+cleaned_data$gene_accession_id <-toupper(cleaned_data$gene_accession_id)
+cleaned_data$gene_symbol <-toupper(cleaned_data$gene_symbol)
+cleaned_data$mouse_strain <-toupper(cleaned_data$mouse_strain)
+cleaned_data$parameter_id <-toupper(cleaned_data$parameter_id)
+
 #Vector to mark valid rows#
 valid_rows <- rep(TRUE, nrow(cleaned_data))
 
