@@ -49,6 +49,9 @@ cleaned_data$gene_symbol <-toupper(cleaned_data$gene_symbol)
 cleaned_data$mouse_strain <-toupper(cleaned_data$mouse_strain)
 cleaned_data$parameter_id <-toupper(cleaned_data$parameter_id)
 
+cleaned_data$mouse_life_stage <- stringr::str_to_sentence(cleaned_data$mouse_life_stage)
+cleaned_data$parameter_name <- stringr::str_to_sentence(cleaned_data$parameter_name)
+
 #Vector to mark valid rows#
 valid_rows <- rep(TRUE, nrow(cleaned_data))
 
