@@ -52,6 +52,13 @@ cleaned_data$parameter_id <-toupper(cleaned_data$parameter_id)
 cleaned_data$mouse_life_stage <- stringr::str_to_sentence(cleaned_data$mouse_life_stage)
 cleaned_data$parameter_name <- stringr::str_to_sentence(cleaned_data$parameter_name)
 
+# Validate the values based on the SOP remarks#
+mouse_strain_values <- toupper(c("C57BL","B6J","C3H","129V"))
+mouse_life_values<- stringr::str_to_sentence(c("E12.5","E15.5","E18.5","E9.5","Early adult","Late adult","Middle aged adult"))
+
+valid_strain <- toupper(cleaned_data$mouse_strain) %in% mouse_strain_values
+valid_life <- cleaned_data$mouse_life_stage %in% mouse_life_values
+
 #Vector to mark valid rows#
 valid_rows <- rep(TRUE, nrow(cleaned_data))
 
@@ -70,6 +77,8 @@ valid_rows <- valid_rows & check_length(cleaned_data$mouse_life_stage, 4, 17)
 valid_rows <- valid_rows & check_length(cleaned_data$parameter_id, 15, 20)
 valid_rows <- valid_rows & check_length(cleaned_data$parameter_name, 2, 74)
 
+valid_rows <- valid_rows & valid_strain
+valid_rows <- valid_rows & valid_life
 
 cleaned_data$pvalue <- suppressWarnings(as.numeric(cleaned_data$pvalue))
 valid_rows <- valid_rows & !is.na(cleaned_data$pvalue)
