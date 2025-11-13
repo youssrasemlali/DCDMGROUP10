@@ -9,6 +9,7 @@ format: html
 library(tidyr)
 library(dplyr)
 library(readr)
+library(data.table)
 
 getwd()
 
@@ -51,6 +52,8 @@ cat("Cleaned dimensions:", dim(parameter_df_clean), "\n")
 #Counts unique values in each column#
 unique_counts <- sapply(parameter_df_clean, function(x) length(unique(x)))
 print(unique_counts)
+
+setnames(parameter_df_clean, "impcParameterOrigId", "impc_parameter_id")
 
 #Saving new cleaned version to CSV#
 write_csv(parameter_df_clean,
