@@ -45,6 +45,10 @@ proc_clean <- proc_df %>%
          is_mandatory = isMandatory,
          impc_parameter_id = impcParameterOrigId)
 
+#Changing NA values to 'NULL'
+proc_clean$description[is.na(proc_clean$description)] <- "NULL"
+
+
 #Inspecting cleaned data#
 glimpse(proc_clean)
 summary(proc_clean)
