@@ -1,0 +1,57 @@
+---
+title: "Disease_info_clean_script"
+format: html
+---
+```{r}
+library("dplyr")
+library("tidyverse")
+```
+
+Load in and read disease information.txt
+```{r}
+data <-read.delim("disease_information.txt", header = TRUE, stringsAsFactors = FALSE)
+
+```
+
+```{r}
+head(data)
+```
+Look at the structure
+
+```{r}
+str(data)
+```
+check the dimensions and for missing values
+```{r}
+dim(data)
+nrow(data)
+ncol(data)
+summary(data)
+```
+```{r}
+any(is.na(data))
+sum(is.na(data))
+
+
+
+data %>% summarise(across(everything(), ~ sum(is.na(.x))))
+
+```
+```{r}
+duplicated(data)
+
+```
+```{r}
+all(grepl("^DOID", data$disease_id))
+all(grepl("^OMIM", data$OMIM.IDs))
+all(grepl("^MGI", data$Mouse.MGI.ID))
+
+
+```
+```{r}
+view(data)
+
+write.csv(data, "DI_clean.csv", row.names = FALSE)
+
+```
+
