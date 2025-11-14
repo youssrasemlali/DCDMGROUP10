@@ -48,10 +48,80 @@ all(grepl("^MGI", data$Mouse.MGI.ID))
 
 
 ```
+
+Rename the column names to remove (.) and replace with (_)
+
 ```{r}
+
+data <- data %>% 
+  rename(OMIM_IDs = OMIM.IDs)
+data <- data %>% 
+  rename(DO_Disease_ID = DO.Disease.ID)
+data <- data %>% 
+  rename(DO_Disease_name = DO.Disease.Name)
+data <- data %>% 
+  rename(Mouse_MGI_ID = Mouse.MGI.ID)
+
+colnames(data)
+
 view(data)
 
-write.csv(data, "DI_clean.csv", row.names = FALSE)
+```
+
+Count how many rows have multiple OMID IDs
+```{r}
+multiple_omims <- sum(grepl("\\|", data$OMIM_IDs))
+cat("Rows with multiple OMIM IDs:", multiple_omims, "\n\n")
+
+
+```{r}
+
+```
+
+Seperate the rows with multiple OMIMS
+```{r}
+data_separated <-data %>%
+  
+  separate_rows(OMIM_IDs, sep = "\\|") %>%
+  
+  mutate(OMIM_IDs = str_trim(OMIM_IDs))
+```
+
+Displays information about the seperation
+Counts number of rows that are in the new dataframe
+Number of colums
+
+```{r}
+cat("Rows:", nrow(data_separated), "\n")
+cat("Columns:", ncol(data_separated), "\n")
+cat("New rows created:", nrow(data_separated) - nrow(data), "\n\n")
+```
+Check the quality of the data
+
+
+```{r}
+cat("Example - Acute lymphoblastic leukemia (before and after):\n")
+```
+```{r}
+
+
+cat("Any missing OMIM_IDs:", sum(is.na(data_separated$OMIM_IDs)), "\n")
+cat("Any empty OMIM_IDs:", sum(data_separated$OMIM_IDs == ""), "\n")
+cat("Unique OMIM IDs:", n_distinct(data_separated$OMIM_IDs), "\n")
+cat("Unique diseases:", n_distinct(data_separated$DO_Disease_ID), "\n")
+cat("Unique mouse genes:", n_distinct(data_separated$Mouse_MGI_ID), "\n")
+```
+```{r}
+output_file <- "DI_clean_separated.csv"
+write_csv(data_separated, output_file)
+view(data)
+```
+
+
+
+```{r}
+
+
 
 ```
 
