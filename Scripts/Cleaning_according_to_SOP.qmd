@@ -23,7 +23,7 @@ duplicate_rows <- duplicated(raw_data)
 cleaned_data <- raw_data[!duplicate_rows, ]
 removed_duplicates <- raw_data[duplicate_rows, ]
 
-#Save bothe removes duplicates and clean data subset#
+#Save both removes duplicates and clean data subset#
 write.csv(cleaned_data, file.path(folder_path, "IMPC_noDuplicates.csv"), row.names = FALSE)
 write.csv(removed_duplicates, file.path(folder_path, "IMPC_duplicatesRemoved.csv"), row.names = FALSE)
 
