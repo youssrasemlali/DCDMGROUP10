@@ -6,6 +6,7 @@ This repository provides tools for processing International Mouse Phenotyping Co
 Data Integration:
 
 - Collating raw IMPC data from IMPC .csv files.
+- Cleaning data according to SOP 
 
 Database Design:
 
