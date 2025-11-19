@@ -212,27 +212,4 @@ server <- function(input, output) {
 #launch Shiny application 
 shinyApp(ui = ui, server = server)
 
-               xref = "paper",# makes the line span across whole x axis/plot
-               line = list(color = "red", dash = "dash"))
-      )
-  })
-  
-  # create our significance table
-  output$sigtable <- renderTable({
-    df <- genedf() #retrieves the selected KO gene
-    df %>%
-      filter(pvalue < 0.05) %>% #only keeps significant values
-      select(parameter_name, pvalue) %>% #our table headers
-      arrange(pvalue) %>% #sort based on most signficant at the top 
-      mutate(pvalue = sprintf("%.10f", pvalue)) #format pvalue to 10dp
-  },
-  caption = "Significant Phenotypes (P-values (10dp) < 0.05)",
-  caption.placement = "top",
-  align = 'lr')#left to right: parameter_name then pvalue order in columns
-  
-  }
-#end of server
-
-#launch Shiny application 
-shinyApp(ui = ui, server = server)
 
