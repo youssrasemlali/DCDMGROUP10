@@ -14,10 +14,11 @@ options(shiny.maxRequestSize = 100*1024^2)
 IMPC_data <- read.csv("C:/Users/sarah/OneDrive/Desktop/KCL/DCDM/GROUP WORK 10/Group10/Group10/IMPC_cleaned_data.csv", 
                       stringsAsFactors = FALSE)
 
-#negative log transformation of pvalue for better visualisation  
+#negative log transformation of pvalue for better visualisation of smaller p-values (stat sig)  
 IMPC_data$logpvalue <- -log10(IMPC_data$pvalue)
 
-#start of our UI - visuals and layout 
+#start of our UI - visuals and layouts
+#shinydashboard
 ui <- dashboardPage(
   dashboardHeader(title = "IMPC Data Group 10"),
   
@@ -88,16 +89,16 @@ server <- function(input, output) {
         yaxis = list(title = "-log10(P-value)"),
         xaxis = list(title = "Phenotype"),
         #shapes inserts our red dashed line to see the significance threshold
-        shapes = list(
+        shapes =
           list(type = "line",
-               y0 = -log10(0.05), #axis 
-               y1 = -log10(0.05),
-               x0 = 0, 
-               x1 = 1,
-               yref = "y", 
-               xref = "paper",
+               y0 = -log10(0.05), #start of y coordinate
+               y1 = -log10(0.05), #end of y coordinate 
+               #our x axis is categorical (phenotypes) so no data values
+               x0 = 0, #left edge of x axis
+               x1 = 1, #right edge of x axis
+               yref = "y", #start the horizontal line at -log10(0.05)
+               xref = "paper",# makes the line span across whole x axis/plot
                line = list(color = "red", dash = "dash"))
-        )
       )
   })
   
