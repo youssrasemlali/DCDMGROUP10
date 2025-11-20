@@ -1,23 +1,32 @@
 drop database if exists IMPC_phenotype_db; 
-create database if not EXISTS IMPC_phenotype_db
--- character set utf8mb4
--- collate utf8mb4_unicode_ci;
+create database if not EXISTS IMPC_phenotype_db;
 
 use impc_phenotype_db;
 
 
 create table Genes(
 	gene_id INT auto_increment primary key,
-	gene_accession_id VARCHAR(50) not null, -- this is also the mgi acession ID
+	gene_accession_id VARCHAR(50) not null UNIQUE, -- this is also the mgi acession ID
 	gene_symbol VARCHAR (100) not null
 );
 #Reasoning, gene_id is the surrogate pk
-#gene_acession must be unique, each acession represents a gene
-#gene symbol is not null as 
-#central table for mouse genes
+-- one to many
+#Table is central references for all the mouse genes (MGI)
+
+-- load data from IMPC_cleaned_data.csv into genes tables
+
+-- have needed to add a staging table in order to deal with duplicate genes
+-- staging table for deduplication
+
+
+CREATE TEMPORARY TABLE temp_genes (
+    gene_accession_id VARCHAR(50),
+    gene_symbol VARCHAR(100)
+);
+
 
 load data local infile 'C:/ProgramData/MySQL/MySQL Server 8.0/Uploads/IMPC_cleaned_data.csv'
-INTO table Genes
+INTO table temp_genes
 FIELDS terminated by ','
 enclosed by '"'
 lines terminated by '\n'
@@ -27,26 +36,23 @@ SET
 	gene_accession_id = @col2,
 	gene_symbol = @col3;
 
+-- selecting distinct genes
+-- the realtionship between the gene and the parameter needs to happen in the phenotype_analysis table
+INSERT INTO Genes (gene_accession_id, gene_symbol)
+SELECT DISTINCT gene_accession_id, gene_symbol
+FROM temp_genes;
+
+DROP TEMPORARY TABLE temp_genes;
+
+
+
+-- check
 select * from Genes;
 
-TRUNCATE table Genes;
-
- -- show VARIABLES like 'secure_file_priv';
-
- -- drop TABLE Genes;
-
--- select gene_accession_id,
-	COUNT (*) as Occurrences
-from Genes
-group by gene_accession_id 
-having COUNT (*) > 1;
+#TRUNCATE table Genes;
 
 
-#one to many realationship
-#Table is central references for all the mouse genes (MGI)
-#Import data from DI_clean and IMPC_cleaned_data
-
--- stores huamnd disease
+-- stores human disease
 create table Disease_ontology(
 	Disease_id INT not null auto_increment primary key, 
 	DO_disease_id VARCHAR(50) not null,
@@ -54,8 +60,10 @@ create table Disease_ontology(
 	OMIM_IDs VARCHAR(100)
 );
 
-#Human disease from DO with OMIM. This has the disease information
-#Disease id and name. THE OMIM identifier and Mouse gene ID
+ -- OMIM to big for datatype and try load data again
+ alter table Disease_ontology
+ modify column OMIM_IDs TEXT;
+
 
 load data infile 'C:/ProgramData/MySQL/MySQL Server 8.0/Uploads/DI_clean_updated.csv'
 INTO table Disease_ontology
@@ -69,30 +77,16 @@ SET
 	DO_disease_name = @col2,
 	OMIM_IDs = @col3;
 
- -- OMIM to big for datatype and try load data again
- alter table Disease_ontology
- modify column OMIM_IDs TEXT;
 
 
 select * from Disease_ontology
-
 select * from disease_ontology where DO_disease_id ='DOID:14221';
-
 select * from disease_ontology where Disease_id= '1';
-
-#Realised that seperating the DI_clean data has produced duplicates 
-
-TRUNCATE table Disease_ontology
-
-DROP TABLE disease_ontology;
-#Dropped the table to start again, put in a wrong column
-
-
-
 select * from Gene_disease_association where gene_id = '6';
-
 select * from disease_ontology where disease_id ='976';
 
+
+-- Table 3
 create table Gene_disease_association (
 	gene_disease_id INT auto_increment primary key,
 	gene_id INT not null,
@@ -102,8 +96,7 @@ create table Gene_disease_association (
 	UNIQUE KEY unique_gene_disease (gene_id, Disease_id)
 );
 
-
-#create a staging table
+-- create a staging table
 CREATE TABLE IF NOT EXISTS DI_stage (
     DO_disease_id VARCHAR(200),
     DO_disease_name VARCHAR(500),
@@ -137,15 +130,10 @@ inner JOIN Disease_ontology d ON d.DO_disease_id = s.DO_disease_id
 WHERE s.gene_accession  IS NOT NULL 
 	AND s.gene_accession <> '';
 
-#can drop the staging table after
-#kept it in for explanantion
-
-drop table di_stage;
-#Links the disease to the associated gene
-#import DI_clean_seperated
-#2 foreign keys for many-to-many relationship between genes and disease
-#This is the joining table
-#dont think i have to laod data here 
+-- Links the disease to the associated gene
+-- import DI_clean_seperated
+-- 2 foreign keys for many-to-many relationship between genes and disease
+-- This is the joining table
 
 -- example queries
 
@@ -163,10 +151,8 @@ LIMIT 10;
  -- 
 
 
--- trying to represent a one to many relationship, one procedure can have seeveral parameters
- -- excluded impc)paramter_id, does no normalize
-
 -- TABLE 4
+-- trying to represent a one to many relationship, one procedure can have seeveral parameters
 
 CREATE TABLE procedures (
     procedure_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -177,10 +163,7 @@ CREATE TABLE procedures (
 );
 
 
-#parameter_id is the IMPC to link parameter (phenotypes) to the procedures
-#procedure_code represents the parameter found in the paramater.csv
-#procedure_code (paramaterId) links the parameters to the procedures
-
+-- staging table
 CREATE TABLE temp_procedures (
     procedure_name VARCHAR(250),
     procedure_description TEXT,
@@ -218,7 +201,7 @@ create table parameters (
 );
  
 
-drop table parameters;
+#drop table parameters;
 
 	
 #create a temp staging table in order to load paramater and procedure column into parameters table	
@@ -232,7 +215,7 @@ CREATE TABLE temp_parameters (
     parameterId VARCHAR (50)
 );
 
-drop table temp_parameters;
+#drop table temp_parameters;
 
 #The csv data from parameters.csv is loaded in the staging table
 
@@ -245,11 +228,7 @@ IGNORE 1 ROWS;
 
 
 #Data laoded into staging table
-#Insert the parameters and procedure
-
- 
--- CORRECT VERSION
-#other version #not using, will get rid of
+#Insert the parameters and procedure_id
 
 INSERT INTO Parameters (
     parameterId, 
@@ -269,20 +248,7 @@ LEFT JOIN Procedures p
     ON p.impc_parameter_id = tp.impc_Parameter_Orig_Id;
 
 
-
-
-#tried to use on duplicate alone had issues
-#had to use AS new
-#also had to change the layout/pattern, issues with AS new
-
-drop table parameters;
-
--- join failed from code above , procedure_id is null in parameter table
-
-
-
-
--- ----------------------------------------------
+-- table 6
 
 #this table helps to group the related paramters we want into one table
 #Defines our groups a
@@ -293,9 +259,6 @@ create table parameter_groupings(
 );
 
 
-
-drop table parameter_groupings;
-	
 -- Insert the parameter groups
 INSERT INTO Parameter_groupings (group_name, group_description)
 VALUES
@@ -310,25 +273,13 @@ VALUES
     ('Limb function', 'Function of various limbs');
 
 SELECT * FROM Parameter_groupings;
+-- The group_id is the PK that we made, identify each grouping this way
 
 
-#The group_id is the PK that we made, identify each grouping this way
-#Groupings are Weight, Images abd brain
-#Additional groups, cardiac, haematology, Bone/skeletal
-#Body weight,spleen weight, liver weight, heart weight, lean mass, fat mass
-#Imaging
-#brain, locomotor activity, 18khz-evoked abr threshold, forebrain
-#kidney, total bilirubin
-#enzymes/liver/kidney, ALP, ALT,
-#teeth, incisor
-#Haematology, iron, calcium, hdl cholesterol, mean platelet volume,Total cd4+ t cells - % of cd45+, WBC count, albumin, hemoglobin, hematocrit
-#vision
-#Bone, bone mineral content (excluding skull), shape of ribs, tibia length, craniofacial morphology, pelvis
-#Immunology
 
-
-#This is a junction table, many to many relationship
-#Allows individual paramaters to link to the groups we made in the parameter_groupings table
+-- table 7
+-- This is a junction table, many to many relationship
+-- Allows individual paramaters to link to the groups we made in the parameter_groupings table
 
 
 create table parameter_group_linking (
@@ -339,7 +290,7 @@ create table parameter_group_linking (
 	foreign key (group_id) references parameter_groupings(group_id)
 );
 
-drop table parameter_group_linking;
+#drop table parameter_group_linking;
  -- insert the parameters related to weight 
 
 INSERT INTO Parameter_group_linking (parameter_id, group_id)
@@ -352,7 +303,7 @@ WHERE pg.group_name = 'Weight'
     AND (LOWER(p.parameter_name) LIKE '%weight%'
     OR LOWER(p.parameter_name) LIKE '%mass%');
 
-
+-- images
 insert INTO Parameter_group_linking (parameter_id, group_id)
 SELECT 
     p.parameter_id,
@@ -450,7 +401,7 @@ WHERE pg.group_name = 'Cardiovascular'
     OR LOWER(p.parameter_name) LIKE '%valve%'
 	OR LOWER(p.parameter_name) LIKE '%atrium%');
 
- -- VISION
+ -- Vision
 
 insert INTO Parameter_group_linking (parameter_id, group_id)
 SELECT 
@@ -466,7 +417,7 @@ WHERE pg.group_name = 'Vision'
     OR LOWER(p.parameter_name) LIKE '%optic%'
 	or LOWER(p.parameter_name) like '%Iris%');
 
-
+-- limb function
 insert INTO Parameter_group_linking (parameter_id, group_id)
 SELECT 
     p.parameter_id,
@@ -479,8 +430,8 @@ WHERE pg.group_name = 'Limb function'
     OR LOWER(p.parameter_name) LIKE '%locomotor%');
 
 
-#last table -- Table 8
-
+-- Last table -- Table 8
+-- joining table
 create TABLE phenotype_analyses(
 	analysis_id VARCHAR(50) primary key,
 	gene_id INT not null, -- loaded in from Genes
@@ -492,11 +443,9 @@ create TABLE phenotype_analyses(
 	foreign key (gene_id) references Genes(gene_id),
 	foreign key (parameter_id) references parameters(parameter_id)
 );
-#core table could also be known as mouse table(	
+
 #This table includes data from IMPC_cleaned_data (the phenotype data).
 # Includes gene info, and the parameters tested.p value is included, this shows us the association score between the knockout gene and the phenotype
-#Here the parameter_id is the one from the main IMPC data
-
 
 -- load staging table
 
@@ -520,6 +469,7 @@ IGNORE 1 ROWS
 (analysis_id, gene_accession_id, gene_symbol, mouse_strain, 
  life_stage, parameterId, parameter_name, pvalue);
 
+-- load into joining table
 INSERT ignore INTO Phenotype_analyses (
     analysis_id,
     gene_id,
@@ -541,25 +491,80 @@ INNER JOIN Genes g
 INNER JOIN Parameters p
     ON p.parameterId = tp.parameterId;
 
-TRUNCATE TABLE Phenotype_analyses;
+#TRUNCATE TABLE Phenotype_analyses;
+
+-- dropped staging tables
+drop table temp_phenotype;
+drop table temp_procedures;
+drop table temp_parameters;
+drop table di_stage;
+
+-- ----------------------------------------------
+
+-- checks 
 
 SELECT COUNT(*) FROM Phenotype_analyses;
 
-
 SELECT 'Checking Genes...' AS status, COUNT(*) FROM Genes;
 SELECT 'Checking parameters...' AS status, COUNT(*) FROM parameters;
-
 SELECT 'Records inserted:' AS status, COUNT(*) FROM phenotype_analyses;
--- --------------------------------------
 
-SELECT 
-    g.gene_symbol,
-    COUNT(*) AS analysis_count
-FROM Phenotype_analyses pa
-JOIN Genes g ON g.gene_id = pa.gene_id
-GROUP BY g.gene_symbol
-ORDER BY analysis_count DESC
-LIMIT 10;
+
 
 SELECT * FROM Phenotype_analyses WHERE analysis_id = '1cbwok0z6011606';
+
+SELECT 'Genes' AS table_name, COUNT(*) AS row_count FROM Genes
+UNION ALL
+SELECT 'Disease_ontology', COUNT(*) FROM Disease_ontology
+UNION ALL
+SELECT 'Gene_disease_association', COUNT(*) FROM Gene_disease_association
+UNION ALL
+SELECT 'Procedures', COUNT(*) FROM Procedures
+UNION ALL
+SELECT 'Parameters', COUNT(*) FROM Parameters
+UNION ALL
+SELECT 'Parameter_groupings', COUNT(*) FROM Parameter_groupings
+UNION ALL
+SELECT 'Parameter_group_linking', COUNT(*) FROM Parameter_group_linking
+UNION ALL
+SELECT 'Phenotype_analyses', COUNT(*) FROM Phenotype_analyses;
+
+-- --------------------------------------------------
+
+-- Queries
+
+
+SHOW DATABASES LIKE 'impc_phenotype_db';
+
+SHOW TABLES IN impc_phenotype_db;
+
+DESCRIBE Genes;
+DESCRIBE Disease_ontology;
+DESCRIBE Gene_disease_association;
+DESCRIBE Procedures;
+DESCRIBE Parameters;
+DESCRIBE Parameter_groupings;
+DESCRIBE Parameter_group_linking;
+DESCRIBE Phenotype_analyses;
+
+SELECT COUNT(*) FROM Genes;
+
+SELECT gene_accession_id, COUNT(*)
+FROM Genes
+GROUP BY gene_accession_id
+HAVING COUNT(*) > 1;
+
+SELECT * FROM Genes LIMIT 20;
+
+select * from Genes where gene_symbol = 'EYA3';
+
+select * from disease_ontology where DO_disease_id = 'DOID:0112248'
+
+
+
+
+
+
+
+
 
