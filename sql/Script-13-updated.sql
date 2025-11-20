@@ -102,18 +102,6 @@ create table Gene_disease_association (
 	UNIQUE KEY unique_gene_disease (gene_id, Disease_id)
 );
 
---- LOAD DATA INFILE 'C:/ProgramData/MySQL/MySQL Server 8.0/Uploads/DI_clean_updated.csv'
-INTO TABLE Gene_disease_association
-FIELDS TERMINATED BY ','
-ENCLOSED BY '"'
-LINES TERMINATED BY '\n'
-IGNORE 1 ROWS
-(@col1, @col2, @col3, @col4)
-SET
-    gene_id = (SELECT gene_id FROM Genes WHERE gene_accession_id = @col2),
-    Disease_id = (SELECT Disease__id FROM Disease_ontology WHERE DO_disease_id = @col1)
-WHERE @col4 IS NOT NULL AND @col4 != '';
-
 
 #create a staging table
 CREATE TABLE IF NOT EXISTS DI_stage (
@@ -141,10 +129,11 @@ set
 
 INSERT INTO Gene_disease_association (gene_id, Disease_id)
 SELECT 
-	g.gene_id, d.Disease_id
+	g.gene_id,
+	d.Disease_id
 FROM DI_stage s
-JOIN Genes g ON g.gene_accession_id = s.gene_accession
-JOIN Disease_ontology d ON d.DO_disease_id = s.DO_disease_id 
+inner JOIN Genes g ON g.gene_accession_id = s.gene_accession
+inner JOIN Disease_ontology d ON d.DO_disease_id = s.DO_disease_id 
 WHERE s.gene_accession  IS NOT NULL 
 	AND s.gene_accession <> '';
 
@@ -176,13 +165,15 @@ LIMIT 10;
 
 -- trying to represent a one to many relationship, one procedure can have seeveral parameters
  -- excluded impc)paramter_id, does no normalize
+
+-- TABLE 4
+
 CREATE TABLE procedures (
     procedure_id INT AUTO_INCREMENT PRIMARY KEY,
     procedure_name VARCHAR(250) NOT NULL,
   	procedure_description TEXT,
-    is_mandatory BOOLEAN DEFAULT false 
-    -- procedure_code VARCHAR (50) not null, -- this is parameterid from the parameter.csv ex(IMPC)
-    -- impc_parameter_id INT not null -- THIS IS col4 of the procedures table, added this to link
+    is_mandatory BOOLEAN DEFAULT false,
+    impc_parameter_id INT
 );
 
 
@@ -190,43 +181,35 @@ CREATE TABLE procedures (
 #procedure_code represents the parameter found in the paramater.csv
 #procedure_code (paramaterId) links the parameters to the procedures
 
-#In the procedure csv. the IMPC_parameter_id is the procedure_code in this table
+CREATE TABLE temp_procedures (
+    procedure_name VARCHAR(250),
+    procedure_description TEXT,
+    is_mandatory VARCHAR(10),
+    impc_parameter_id INT
+);
+LOAD DATA LOCAL INFILE 'C:/ProgramData/MySQL/MySQL Server 8.0/Uploads/IMPC_procedure_clean.csv'
+INTO TABLE temp_procedures
+FIELDS TERMINATED BY ',' 
+ENCLOSED BY '"'
+LINES TERMINATED BY '\n'
+IGNORE 1 ROWS;
+-- used varchar in order to accept true and false
 
-select if (is_mandatory, 'TRUE', 'FALSE') as my_bool
-from procedures
-#Meant to convert 1/0 to true and false respectively
+-- now laoding into procedures table
 
-
-load data infile 'C:/ProgramData/MySQL/MySQL Server 8.0/Uploads/IMPC_procedure_clean.csv'
-INTO table procedures
-FIELDS terminated by ','
-enclosed by '"'
-lines terminated by '\n'
-IGNORE 1 ROWS
-(@col1, @col2, @col3, @col4)
-SET
-	procedure_name = @col1,
-	procedure_description = @col2,
-	is_mandatory = case when UPPER(@col3) = 'TRUE' then true else false end
-;
-
-#loading was successful
-#false is a string, isnt automatically converted to an int
-#code converts the true/false string into 1/0
-
-drop table procedures;
-
-#load data wont let me update to add additoal column from other csv
-#Must make a temp table
+INSERT INTO Procedures (procedure_name, procedure_description, is_mandatory, impc_parameter_id)
+SELECT 
+    procedure_name,
+    procedure_description,
+    CASE WHEN UPPER(is_mandatory) = 'TRUE' THEN 1 ELSE 0 END,
+    impc_parameter_id
+FROM temp_procedures;
 
 
-
-
-
-
+-- Table 5
 create table parameters (
 	parameter_id INT auto_increment primary key, -- ref this at pt_analysis table
-	parameterId VARCHAR(50) not null unique, -- col 4 in parameter csv --refered to as parameter_code previosuly --wil link pt results
+	parameterId VARCHAR(50) not null, -- col 4 in parameter csv --refered to as parameter_code previosuly --IMPC parameter identifier
 	impc_parameter_orig_id INT, -- link to procedures
 	parameter_name VARCHAR(200),
     parameter_description TEXT,
@@ -234,39 +217,22 @@ create table parameters (
     FOREIGN KEY (procedure_id) REFERENCES procedures (procedure_id)
 );
  
--- altered so i could compare the impc_parameter_ids from both procedures and parameters
-ALTER TABLE parameters 
-    MODIFY impc_parameter_orig_id VARCHAR(50);
 
+drop table parameters;
 
-
-
-#this didnt work
-#load data infile 'C:/ProgramData/MySQL/MySQL Server 8.0/Uploads/IMPC_parameter_description_clean.csv'
-#INTO table parameters
-#FIELDS terminated by ','
-#enclosed by '"'
-#lines terminated by '\n'
-#IGNORE 1 ROWS
-#(@col1, @col2, @col3, @col4)
-#SET
-	#impc_parameter_orig_id = @col1,
-	#parameter_name = @col2,
-	#parameter_description = @col3;
-	
 	
 #create a temp staging table in order to load paramater and procedure column into parameters table	
 #staging table should mirror the the csv file not the table
 
-
+-- staging table
 CREATE TABLE temp_parameters (
-    parameterId INT,
-    parameter_name VARCHAR(200),
+	impc_Parameter_Orig_Id INT,
+  	parameter_name VARCHAR(200),
     parameter_description TEXT,
-    impc_Parameter_Orig_Id VARCHAR(50)
+    parameterId VARCHAR (50)
 );
 
-
+drop table temp_parameters;
 
 #The csv data from parameters.csv is loaded in the staging table
 
@@ -278,39 +244,32 @@ LINES TERMINATED BY '\n'
 IGNORE 1 ROWS;
 
 
-
-drop table temp_parameters;
-#made a mistake, dropped the table
-
 #Data laoded into staging table
 #Insert the parameters and procedure
 
  
 -- CORRECT VERSION
 #other version #not using, will get rid of
-INSERT INTO Parameters (
-	parameterId, 
-	impc_parameter_orig_id, 
-	parameter_name, 
-	parameter_description, 
-	procedure_id
-)
 
-SELECT * from (
-	SELECT
-    temp_parameters.col4 as parameterId,
-    temp_parameters.col1 as impc_parameter_orig_id,
-    temp_parameters.col2 as parameter_name,
-    temp_parameters.col3 as parameter_description,
-    procedures.procedure_id as procedure_id
-FROM temp_parameters
-LEFT JOIN Procedures 
-	ON procedures.procedure_id = temp_parameters.col4
+INSERT INTO Parameters (
+    parameterId, 
+    impc_parameter_orig_id, 
+    parameter_name, 
+    parameter_description, 
+    procedure_id
 )
-AS new
-ON DUPLICATE KEY UPDATE 
-    parameter_name = new.parameter_name,
-    parameter_description = new.parameter_description;
+SELECT 
+    tp.parameterId,
+    tp.impc_Parameter_Orig_Id,
+    tp.parameter_name,
+    tp.parameter_description,
+    p.procedure_id
+FROM temp_parameters tp
+LEFT JOIN Procedures p 
+    ON p.impc_parameter_id = tp.impc_Parameter_Orig_Id;
+
+
+
 
 #tried to use on duplicate alone had issues
 #had to use AS new
@@ -320,61 +279,6 @@ drop table parameters;
 
 -- join failed from code above , procedure_id is null in parameter table
 
-
-
--- Make a temp procedures table (this was meant to fix the null procedure-id in my parameters table but still didnt work)
--- load temp procedure table
-
-CREATE TEMPORARY TABLE temp_procedures (
-    procedure_name VARCHAR(255),
-    procedure_description TEXT,
-    is_mandatory VARCHAR(10),
-    impc_parameter_id VARCHAR(50)
-);
-
-ALTER TABLE temp_procedures 
-    MODIFY impc_parameter_id VARCHAR(50); -- dont need to run this as i change dtable
-
--- had to alter impc_parameter_id to a varchar in order to comapre them
-
-
-LOAD DATA LOCAL INFILE 'C:/ProgramData/MySQL/MySQL Server 8.0/Uploads/IMPC_procedure_clean.csv'
-INTO TABLE temp_procedures
-FIELDS TERMINATED BY ',' 
-ENCLOSED BY '"'
-LINES TERMINATED BY '\n'
-IGNORE 1 ROWS;
-
-INSERT IGNORE INTO procedures (procedure_name, procedure_description, is_mandatory)
-SELECT DISTINCT 
-    procedure_name,
-    procedure_description,
-    CASE WHEN is_mandatory = 'TRUE' THEN 1 ELSE 0 END
-FROM temp_procedures;
-
--- succesffuly loaded info into temp_procedures above
-
--- tried other code below
-
-SELECT COUNT(*) FROM procedures; -- queries not part of code
-SELECT * FROM procedures WHERE procedure_name = 'Grip Strength';
-
-INSERT INTO parameters 
-    (parameterId, parameter_name, parameter_description, impc_parameter_orig_id, procedure_id)
-SELECT 
-    tp.parameterId AS parameterId,
-    tp.parameter_name AS parameter_name,
-    tp.parameter_description AS parameter_description,
-    tp.impc_Parameter_Orig_Id AS impc_parameter_orig_id,
-    p.procedure_id
-FROM temp_parameters tp
-LEFT JOIN temp_procedures tproc 
-    ON tp.impc_Parameter_Orig_Id = tproc.impc_parameter_id
-LEFT JOIN procedures p 
-    ON tproc.procedure_name = p.procedure_name;
-
-
--- its still null (procedure_id) didnt work 
 
 
 
@@ -390,18 +294,22 @@ create table parameter_groupings(
 
 
 
-#drop table parameter_groupings;
+drop table parameter_groupings;
 	
-insert into parameter_groupings (group_name,group_description) 
-values
-('Weight ','Body weight and organ weight measurements' ),
-('Imaging','Parmeters with imaging-based measurements'),
-('Brain', 'Brain morphology and neurological parameters'),
-('Bone','Bone density, mineral content and skeletal structure parameters'),
-('Haematology','Complete blood count and blood chemistry parameters'),
-('Cardiovascular function', 'Heart function, ECG, blood pressure, and cardiac morphology'),
-('Vision', 'Eye morphology, retinal structure, lens parameters, and vision tests');
+-- Insert the parameter groups
+INSERT INTO Parameter_groupings (group_name, group_description)
+VALUES
+    ('Weight', 'Body weight and organ weight measurements'),
+    ('Imaging', 'Parameters with imaging-based measurements'),
+    ('Brain', 'Brain morphology and neurological parameters'),
+    ('Bone', 'Bone density, mineral content and skeletal structure parameters'),
+    ('Haematology', 'Complete blood count and blood chemistry parameters'),
+    ('Cardiovascular', 'Heart function, ECG, blood pressure, and cardiac morphology'),
+    ('Vision', 'Eye morphology, retinal structure, lens parameters, and vision tests'),
+    ('Immunology', 'Immune system cell counts and function'),
+    ('Limb function', 'Function of various limbs');
 
+SELECT * FROM Parameter_groupings;
 
 
 #The group_id is the PK that we made, identify each grouping this way
@@ -421,6 +329,8 @@ values
 
 #This is a junction table, many to many relationship
 #Allows individual paramaters to link to the groups we made in the parameter_groupings table
+
+
 create table parameter_group_linking (
 	linking_id INT auto_increment primary key,
 	parameter_id INT not null,
@@ -432,117 +342,144 @@ create table parameter_group_linking (
 drop table parameter_group_linking;
  -- insert the parameters related to weight 
 
-insert into parameter_group_linking (parameter_id, group_id)
-select 
-	parameters.parameter_id,
-	parameter_groupings.group_id
-from parameters 
-Join parameter_groupings 
-where parameter_groupings.group_name = 'Weight'
-	and (LOWER(parameters.parameter_name) like '%weight%'
-	or LOWER(parameters.parameter_name) like '%mass%');
+INSERT INTO Parameter_group_linking (parameter_id, group_id)
+SELECT 
+    p.parameter_id,
+    pg.group_id
+FROM Parameters p
+CROSS JOIN Parameter_groupings pg
+WHERE pg.group_name = 'Weight'
+    AND (LOWER(p.parameter_name) LIKE '%weight%'
+    OR LOWER(p.parameter_name) LIKE '%mass%');
 
 
--- Imaging
-insert into parameter_group_linking (parameter_id, group_id)
-select 
-	parameters.parameter_id,
-	parameter_groupings.group_id
-from parameters 
-join 
-	parameter_groupings on parameter_groupings.group_name = 'Image'
-where
-	lower(parameters.parameter_name) like '%Image%'
-	or lower(parameters.parameter_name) like '%scan%';
- 
-	-- brain
-insert into parameter_group_linking (parameter_info_id, group_id)
+insert INTO Parameter_group_linking (parameter_id, group_id)
+SELECT 
+    p.parameter_id,
+    pg.group_id
+FROM Parameters p
+CROSS JOIN Parameter_groupings pg
+WHERE pg.group_name = 'Imaging'
+    AND (LOWER(p.parameter_name) LIKE '%image%'
+    OR LOWER(p.parameter_name) LIKE '%scan%'
+    OR LOWER(p.parameter_name) LIKE '%x-ray%');
 
-select 
-	parameters.parameter_info_id
-	parameter_groupings.group_id
-from parameters 
-join parameter_groupings on parameter_groupings.group_name = 'Brain'
-or lower(parameters.parameter_name) like '%Neural%',
-	or LOWER(parameters.paramater_name) like '%%';
+-- brain
 
+INSERT INTO Parameter_group_linking (parameter_id, group_id)
+SELECT 
+    p.parameter_id,
+    pg.group_id
+FROM Parameters p
+CROSS JOIN Parameter_groupings pg
+WHERE pg.group_name = 'Brain'
+    AND (LOWER(p.parameter_name) LIKE '%brain%'
+    OR LOWER(p.parameter_name) LIKE '%neural%'
+    OR LOWER(p.parameter_name) LIKE '%forebrain%'
+    OR LOWER(p.parameter_name) LIKE '%cortex%'
+    OR LOWER(p.parameter_name) LIKE '%Hippocampus%'
+    OR LOWER(p.parameter_name) LIKE '%Hypothalamus%'
+    OR LOWER(p.parameter_name) LIKE '%Hippocampus%'
+    OR LOWER(p.parameter_name) LIKE '%Nerve%');
 
 -- immunology
 
-insert into parameter_group_linking (parameter_info_id, group_id)
-select 
-	parameters.parameter_info_id
-	parameter_groupings.group_id
-from parameters 
-join parameter_groupings on parameter_groupings.group_name = 'Immunology'
-or lower(parameters.parameter_name) like '%NK cells%',
-	or LOWER(parameters.paramater_name) like '%leukocytes%'
-	or LOWER(parameters.paramater_name) like '%white blood cell_count%'
-	or LOWER(parameters.paramater_name) like '% t cells%'
-	or LOWER(parameters.paramater_name) like '%cd45+%';
+insert into Parameter_group_linking (parameter_id, group_id)
+SELECT 
+    p.parameter_id,
+    pg.group_id
+from Parameters p
+CROSS JOIN Parameter_groupings pg
+WHERE pg.group_name = 'Immunology'
+    AND (LOWER(p.parameter_name) LIKE '%nk cells%'
+    OR LOWER(p.parameter_name) LIKE '%leukocyte%'
+    OR LOWER(p.parameter_name) LIKE '%white blood cell%'
+    OR LOWER(p.parameter_name) LIKE '%Tcells%'
+    OR LOWER(p.parameter_name) LIKE '%cd45%'
+    OR LOWER(p.parameter_name) LIKE '%cd4%'
+    OR LOWER(p.parameter_name) LIKE '%lymphocyte%'
+	OR LOWER(p.parameter_name) LIKE '%B cells%');
 
 -- haematology
 
-insert into parameter_group_linking (parameter_info_id, group_id)
-
-select 
-	parameters.parameter_info_id
-	parameter_groupings.group_id
-from parameters 
-join parameter_groupings on parameter_groupings.group_name = 'Haematology'
-or lower(parameters.parameter_name) like '%Iron%',
-	or LOWER(parameters.paramater_name) like '%Sodium%'
-	or LOWER(parameters.paramater_name) like '%Hdl-cholesterol%'
-	or LOWER(parameters.paramater_name) like '%Mean platelet volume%'
- 	or LOWER(parameters.paramater_name) like '%Ablumin%'
-	or LOWER(parameters.paramater_name) like '%Hemoglobin%'
- 	or LOWER(parameters.paramater_name) like '%Red blood cell%'
+insert into Parameter_group_linking (parameter_id, group_id)
+SELECT 
+    p.parameter_id,
+    pg.group_id
+from Parameters p
+CROSS JOIN Parameter_groupings pg
+WHERE pg.group_name = 'Haematology'
+    AND (LOWER(p.parameter_name) LIKE '%iron%'
+    OR LOWER(p.parameter_name) LIKE '%sodium%'
+    OR LOWER(p.parameter_name) LIKE '%hdl%'
+    OR LOWER(p.parameter_name) LIKE '%cholesterol%'
+    OR LOWER(p.parameter_name) LIKE '%platelet%'
+    OR LOWER(p.parameter_name) LIKE '%albumin%'
+    OR LOWER(p.parameter_name) LIKE '%hemoglobin%'
+    OR LOWER(p.parameter_name) LIKE '%hematocrit%'
+    OR LOWER(p.parameter_name) LIKE '%red blood cell%');
  	
  	-- bone
-insert into parameter_group_linking (parameter_info_id, group_id)
+insert INTO Parameter_group_linking (parameter_id, group_id)
+SELECT 
+    p.parameter_id,
+    pg.group_id
+from Parameters p
+CROSS JOIN Parameter_groupings pg
+WHERE pg.group_name = 'Bone'
+    AND (LOWER(p.parameter_name) LIKE '%skeletal%'
+    OR LOWER(p.parameter_name) LIKE '%bone%'
+    OR LOWER(p.parameter_name) LIKE '%rib%'
+    OR LOWER(p.parameter_name) LIKE '%mineral%'
+    OR LOWER(p.parameter_name) LIKE '%skull%'
+    OR LOWER(p.parameter_name) LIKE '%tibia%'
+    OR LOWER(p.parameter_name) LIKE '%pelvis%'
+    OR LOWER(p.parameter_name) LIKE '%craniofacial%');
 
-select 
-	parameters.parameter_info_id
-	parameter_groupings.group_id
-from parameters 
-join parameter_groupings on parameter_groupings.group_name = 'Bones'
-or lower(parameters.parameter_name) like '%skeletal%',
-	or LOWER(parameters.paramater_name) like '%Shape of ribs%'
-	or LOWER(parameters.paramater_name) like '% mineral density%'
-	or LOWER(parameters.paramater_name) like '%Skull shape%'
+ -- cardio
+INSERT INTO Parameter_group_linking (parameter_id, group_id)
+SELECT 
+    p.parameter_id,
+    pg.group_id
+FROM Parameters p
+CROSS JOIN Parameter_groupings pg
+WHERE pg.group_name = 'Cardiovascular'
+    AND (LOWER(p.parameter_name) LIKE '%heart%'
+    OR LOWER(p.parameter_name) LIKE '%cardiac%'
+    OR LOWER(p.parameter_name) LIKE '%cardio%'
+    OR LOWER(p.parameter_name) LIKE '%valve%'
+	OR LOWER(p.parameter_name) LIKE '%atrium%');
 
- 	
-	-- Enzymes
-insert into parameter_group_linking (parameter_info_id, group_id)
+ -- VISION
 
-select 
-	parameters.parameter_info_id
-	parameter_groupings.group_id
-from parameters 
-join parameter_groupings on parameter_groupings.group_name = 'Enzymes'
-or lower(parameters.parameter_name) like '%Alpha amylase%',
-	or LOWER(parameters.paramater_name) like '%Aspartate aminotransferase%'
-	or LOWER(parameters.paramater_name) like '%Alanine aminotransferase%'
-	or LOWER(parameters.paramater_name) like '%Alkaline phosphate%';
-	
-	
-	
-	
-	
-#drop table parameter_group_linking;
-
-#i think this is redundant, as im putting foreign keys into the paramaters and procedures.
-#Could still keep it 
--- CREATE TABLE procedure_parameters (
-    -- procedure_parameter_id INT AUTO_INCREMENT PRIMARY KEY,
-    -- procedure_id INT NOT NULL,
-    -- parameter_id VARCHAR(50) NOT NULL,
-    -- FOREIGN KEY (procedure_id) REFERENCES procedures(procedure_id),
-    -- FOREIGN KEY (parameter_id) REFERENCES parameters(parameter_id)
--- );
+insert INTO Parameter_group_linking (parameter_id, group_id)
+SELECT 
+    p.parameter_id,
+    pg.group_id
+from Parameters p
+CROSS JOIN Parameter_groupings pg
+WHERE pg.group_name = 'Vision'
+    AND (LOWER(p.parameter_name) LIKE '%eye%'
+    OR LOWER(p.parameter_name) LIKE '%retina%'
+    OR LOWER(p.parameter_name) LIKE '%lens%'
+    OR LOWER(p.parameter_name) LIKE '%vision%'
+    OR LOWER(p.parameter_name) LIKE '%optic%'
+	or LOWER(p.parameter_name) like '%Iris%');
 
 
-#last table
+insert INTO Parameter_group_linking (parameter_id, group_id)
+SELECT 
+    p.parameter_id,
+    pg.group_id
+from Parameters p
+CROSS JOIN Parameter_groupings pg
+WHERE pg.group_name = 'Limb function'
+    AND (LOWER(p.parameter_name) LIKE '%strength%'
+    OR LOWER(p.parameter_name) LIKE '%grip%'
+    OR LOWER(p.parameter_name) LIKE '%locomotor%');
+
+
+#last table -- Table 8
 
 create TABLE phenotype_analyses(
 	analysis_id VARCHAR(50) primary key,
@@ -550,7 +487,7 @@ create TABLE phenotype_analyses(
 	parameter_id INT not null, -- matches parameters table pk
 	mouse_strain VARCHAR(50) not null,
 	life_stage VARCHAR (50) not null,
-	pvalue DECIMAL(10,9), -- chnaged to decimal, better prescion
+	pvalue DOUBLE, -- chnaged to decimal, better prescion
 	
 	foreign key (gene_id) references Genes(gene_id),
 	foreign key (parameter_id) references parameters(parameter_id)
@@ -561,82 +498,68 @@ create TABLE phenotype_analyses(
 #Here the parameter_id is the one from the main IMPC data
 
 
--- Must create the 2 lookup tables to lload in data from gene table(pk) and parameters table(pk)
-load data infile 'C:/ProgramData/MySQL/MySQL Server 8.0/Uploads/IMPC_cleaned_data.csv'
-INTO table phenotype_analyses
-FIELDS terminated by ','
-enclosed by '"'
-lines terminated by '\n'
-IGNORE 1 ROWS
-(@col, @col2, @col3, @col4, @col5, @col6, @col7, @col8)
-SET
-	analysis_id = @col1,
-	gene_accession_id = @col2,
-	gene_id = (
-		select gene_id 
-		from Genes 
-		where gene_accession_id =@col2
-		-- limit 1 -- had to do this because of gene accession duplicates
-),
-	parameter_id = (
-		select parameter_id
-		from parameters
-		where parameterId = @col6
-),
-	mouse_strain= @col4,
-	life_stage = @col5,
-	pvalue = @col8;
+-- load staging table
 
-
-drop table phenotype_analyses;
-
-
--- making a staging table 
-
-CREATE TEMPORARY TABLE temp_phenotype (
+create table temp_phenotype (
     analysis_id VARCHAR(50),
-    gene_accession_id varchar(50),
-    gene_symbol varchar (50),
+    gene_accession_id VARCHAR(50),
+    gene_symbol VARCHAR(50),
     mouse_strain VARCHAR(50),
     life_stage VARCHAR(50),
-    parameterId varchar(50),
-    parameter_name varchar(255),
-    pvalue DOUBLE(10,9)
+    parameterId VARCHAR(50),
+    parameter_name VARCHAR(250),
+    pvalue DOUBLE
 );
 
-drop table temp_phenotype;
-
--- loading data into staging tbale
-LOAD DATA INFILE 'C:/ProgramData/MySQL/MySQL Server 8.0/Uploads/IMPC_cleaned_data.csv'
+LOAD DATA LOCAL INFILE 'C:/ProgramData/MySQL/MySQL Server 8.0/Uploads/IMPC_cleaned_data.csv'
 INTO TABLE temp_phenotype
 FIELDS TERMINATED BY ','
 ENCLOSED BY '"'
 LINES TERMINATED BY '\n'
-IGNORE 1 rows
+IGNORE 1 ROWS
 (analysis_id, gene_accession_id, gene_symbol, mouse_strain, 
-life_stage, parameterId, parameter_name, @pvalue);
+ life_stage, parameterId, parameter_name, pvalue);
 
- -- insert with the joining tbale
--- ended up using a staging tabel as it allows sql to return mutltiple rows for gene acession matches
-#the other method didnt 
-
-INSERT INTO phenotype_analyses 
-    (analysis_id, gene_id, parameter_id, mouse_strain, life_stage, pvalue)
+INSERT ignore INTO Phenotype_analyses (
+    analysis_id,
+    gene_id,
+    parameter_id,
+    mouse_strain,
+    life_stage,
+    pvalue
+)
 SELECT 
     tp.analysis_id,
     g.gene_id,
-    p.parameter_id,  -- The integer from parameters table
+    p.parameter_id,
     tp.mouse_strain,
     tp.life_stage,
     tp.pvalue
 FROM temp_phenotype tp
 INNER JOIN Genes g 
-    ON tp.gene_accession_id = g.gene_accession_id
-INNER JOIN parameters p 
-    ON tp.parameterId = p.parameterId;
--- -------------------------------
+    ON g.gene_accession_id = tp.gene_accession_id
+INNER JOIN Parameters p
+    ON p.parameterId = tp.parameterId;
+
+TRUNCATE TABLE Phenotype_analyses;
+
+SELECT COUNT(*) FROM Phenotype_analyses;
+
 
 SELECT 'Checking Genes...' AS status, COUNT(*) FROM Genes;
 SELECT 'Checking parameters...' AS status, COUNT(*) FROM parameters;
 
-SELECT 'Records inserted:' AS status, COUNT(*) AS rows FROM phenotype_analyses;
+SELECT 'Records inserted:' AS status, COUNT(*) FROM phenotype_analyses;
+-- --------------------------------------
+
+SELECT 
+    g.gene_symbol,
+    COUNT(*) AS analysis_count
+FROM Phenotype_analyses pa
+JOIN Genes g ON g.gene_id = pa.gene_id
+GROUP BY g.gene_symbol
+ORDER BY analysis_count DESC
+LIMIT 10;
+
+SELECT * FROM Phenotype_analyses WHERE analysis_id = '1cbwok0z6011606';
+
