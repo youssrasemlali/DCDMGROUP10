@@ -194,7 +194,7 @@ server <- function(input, output) {
     df2 <- phenodf() #retrieves the selected KO gene
     df2 %>%
       filter(pvalue < 0.05) %>% #only keeps significant values
-      select(gene_symbol,parameter_name, pvalue) %>% #our table headers
+      select(gene_symbol, pvalue) %>% #our table headers
       arrange(pvalue) %>% #sort based on most signficant at the top 
       mutate(pvalue = sprintf("%.10f", pvalue)) #format pvalue to 10dp
   },
@@ -211,5 +211,6 @@ server <- function(input, output) {
 
 #launch Shiny application 
 shinyApp(ui = ui, server = server)
+
 
 
