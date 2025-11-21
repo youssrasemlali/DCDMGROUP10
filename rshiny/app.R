@@ -1,3 +1,5 @@
+#MAIN DASHBOARD
+
 
 ########SQL CONNECT######
 #reads a mysqltable into rshiny app
@@ -10,6 +12,8 @@
 
 #load data
 #df <- dbGetQuery(DCDM_SQL, 'table_name') #reads as a data.frame
+
+
 
 
 ######shinydashboard#######
@@ -79,11 +83,13 @@ ui <- dashboardPage(
               p("Select a knockout mouse gene and visualise the statistical
 scores of all phenotypes tested with the scatter graph. Significant and non-significant -log10 P-values are shown. The red dotted line signifies the significance threshold. "),
               #dropdown for ko gene selection
-              selectInput("gene",
+              fluidRow(
+                column(6,selectInput("gene",
                           "Select Gene Symbol:",
-                          choices = sort(unique(IMPC_data$gene_symbol))),
+                          choices = sort(unique(IMPC_data$gene_symbol)))),
               #our significant table 
-                tableOutput("sigtable"),
+                column(6,h4(textOutput("sigtable1title")),
+                       tableOutput("sigtable"))),
               #our first plot 
                 plotlyOutput("p1_gene", height ="750px")
         ),
@@ -93,12 +99,13 @@ scores of all phenotypes tested with the scatter graph. Significant and non-sign
               p("Select a phenotype and visualise the
 statistical scores of all knockout mice with the scatter graph. Significant and non-significant -log10 P-values are shown. The red dotted line signifies the significance threshold."),
               #dropdown for ko gene selection
-              selectInput("phenotype",
+              fluidRow(
+                column(6, selectInput("phenotype",
                           "Select the Specfic Phenotype:",
-                          choices = sort(unique(IMPC_data$parameter_name))),
+                          choices = sort(unique(IMPC_data$parameter_name)))),
               #our significant table 
-              h4(textOutput("sigtable2title")),
-              tableOutput("sigtable2"),
+                column(6,h4(textOutput("sigtable2title")),
+              tableOutput("sigtable2"))),
               #our second plot 
               plotlyOutput("p2_mouse", height ="750px")
               ),
@@ -112,9 +119,11 @@ statistical scores of all knockout mice with the scatter graph. Significant and 
                 column(4, selectInput("pc_yaxis", "PC Y-axis: ", choices = paste0("PC", 1:10), selected = "PC2")),
                 column(4, sliderInput("kclusters", "Number of Clusters: ", min = 2, max = 10, value = 3))
               ),
-              h4(textOutput("loadingtabletitle")),
-              tableOutput("loadingtable"),
-              plotlyOutput("p3_cluster", height ="750px")
+              fluidRow(
+                column(3,h4(textOutput("loadingtabletitle")),
+              tableOutput("loadingtable")),
+              column(9,
+              plotlyOutput("p3_cluster", height ="750px")))
       )
     )
   )
@@ -180,11 +189,9 @@ server <- function(input, output) {
       select(parameter_name, pvalue) %>% #our table headers
       arrange(pvalue) %>% #sort based on most signficant at the top 
       mutate(pvalue = sprintf("%.10f", pvalue)) #format pvalue to 10dp
-  },
-  caption = "Significant Phenotypes (P-values (10dp) < 0.05)",
-  caption.placement = "top",
-  align = 'lr')#left to right: parameter_name then pvalue order in columns
+  })
   
+  output$sigtable1title <-renderText({paste0("Significant Phenotypes (P-values (10dp) < 0.05) ",input$gene_symbol)})
   
   
   #2 All Mice Scores for a Phenotype
@@ -243,8 +250,7 @@ server <- function(input, output) {
       mutate(pvalue = sprintf("%.10f", pvalue)) #format pvalue to 10dp
   })
   
-  output$sigtable2title <-renderText({paste0("Significant KO Genes for ",input$phenotype)
-    })
+  output$sigtable2title <-renderText({paste0("Significant KO Genes for ",input$phenotype)})
   
   
   #3 Gene Clusters
@@ -317,11 +323,12 @@ server <- function(input, output) {
   output$loadingtabletitle <- renderText({ paste0("Top Phenotypes that influence ", input$pc_xaxis) })
   
 }
+  
+  
 #end of server
 
 #launch Shiny application 
 shinyApp(ui = ui, server = server)
-
 
 
 
