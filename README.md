@@ -30,3 +30,14 @@ Interactive Dashboard:
 - `IMPC_parameter_description.txt`-> Descriptions of phenotype parameters.
 - `IMPC_procedure.txt`-> Details of phenotype procedures.
 
+`rshiny/`
+
+- `app.R` -> rshiny script producing visualisations 
+
+
+`sql/`
+
+- `Script-13-updated.sql` -> script creating database tables and populating tables
+- `impc_phenotype_db.png` -> SQL database
+
+
