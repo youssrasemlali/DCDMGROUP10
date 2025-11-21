@@ -62,26 +62,27 @@ IMPC_matrix <- IMPC_data %>%
 
 #start of our UI - visuals and layouts
 #shinydashboard
-ui <- dashboardPage(
+ui <- dashboardPage(skin="purple",
   dashboardHeader(title = "IMPC Data Group 10"),
   
   #created a sidebar that you can click on the different graphs 
   dashboardSidebar(
     sidebarMenu(
-      menuItem("Phenotypic Scores", tabName = "phenoKOgene", icon =icon("dashboard")),
-      menuItem("Mice Scores", tabName = "micescores", icon =icon("dashboard")),
-      menuItem("Gene Clusters", tabName = "geneclusters", icon =icon("dashboard"))
+      menuItem("Phenotypic Scores", tabName = "phenoKOgene", icon =icon("atom")),
+      menuItem("Mice Scores", tabName = "micescores", icon =icon("dna")),
+      menuItem("Gene Clusters", tabName = "geneclusters", icon =icon("th"))
     )
   ),
   
   #organise inside content
-  dashboardBody(
+  dashboardBody( 
     tabItems(
         #tab for Phenotypic Scores for KO Gene
       tabItem(tabName = "phenoKOgene", #to link to the menuItem
               h2("Phenotypic Scores for KO Gene"), #header
               p("Select a knockout mouse gene and visualise the statistical
 scores of all phenotypes tested with the scatter graph. Significant and non-significant -log10 P-values are shown. The red dotted line signifies the significance threshold. "),
+              br(),
               #dropdown for ko gene selection
               fluidRow(
                 column(6,selectInput("gene",
@@ -90,6 +91,7 @@ scores of all phenotypes tested with the scatter graph. Significant and non-sign
               #our significant table 
                 column(6,h4(textOutput("sigtable1title")),
                        tableOutput("sigtable"))),
+              br(),
               #our first plot 
                 plotlyOutput("p1_gene", height ="750px")
         ),
@@ -98,6 +100,7 @@ scores of all phenotypes tested with the scatter graph. Significant and non-sign
               h2("All Mice Scores for a Phenotype"), #header
               p("Select a phenotype and visualise the
 statistical scores of all knockout mice with the scatter graph. Significant and non-significant -log10 P-values are shown. The red dotted line signifies the significance threshold."),
+              br(),
               #dropdown for ko gene selection
               fluidRow(
                 column(6, selectInput("phenotype",
@@ -106,19 +109,23 @@ statistical scores of all knockout mice with the scatter graph. Significant and 
               #our significant table 
                 column(6,h4(textOutput("sigtable2title")),
               tableOutput("sigtable2"))),
+              br(),
               #our second plot 
               plotlyOutput("p2_mouse", height ="750px")
               ),
+      
       tabItem(tabName = "geneclusters",
               h2("Visualising Gene Clusters Based on Similar Phenotype Scores"),
               p("Select principal components and visualise gene clusters based on their phenotype scores. 
                 This PCA plot shows how genes are grouped together with different colours that represent k-means clusters.
                 The loading table lists the top ten phenotypes that contribute towards a PC"),
+              br(),
               fluidRow(
                 column(4, selectInput("pc_xaxis", "PC X-axis: ", choices = paste0("PC", 1:10), selected = "PC1")),
                 column(4, selectInput("pc_yaxis", "PC Y-axis: ", choices = paste0("PC", 1:10), selected = "PC2")),
                 column(4, sliderInput("kclusters", "Number of Clusters: ", min = 2, max = 10, value = 3))
               ),
+              br(),
               fluidRow(
                 column(3,h4(textOutput("loadingtabletitle")),
               tableOutput("loadingtable")),
@@ -323,13 +330,11 @@ server <- function(input, output) {
   output$loadingtabletitle <- renderText({ paste0("Top Phenotypes that influence ", input$pc_xaxis) })
   
 }
-  
-  
+
 #end of server
 
 #launch Shiny application 
 shinyApp(ui = ui, server = server)
-
 
 
 
