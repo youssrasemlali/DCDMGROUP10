@@ -1,5 +1,3 @@
-#MAIN DASHBOARD
-
 
 ########SQL CONNECT######
 #reads a mysqltable into rshiny app
@@ -14,25 +12,49 @@
 #df <- dbGetQuery(DCDM_SQL, 'table_name') #reads as a data.frame
 
 
-
-
 ######shinydashboard#######
 
 #library 
 library(shiny)
 library(dplyr)
+library(plotly)
+library(tidyr)
+library(tibble)
 library(shinydashboard) #for our dashboard
-
 
 #set rshiny size
 options(shiny.maxRequestSize = 100*1024^2)
+
+#DATA IMPORTATION & NEEDED MUTATION (check if needed with SQL#
 
 #load data 
 IMPC_data <- read.csv("C:/Users/sarah/OneDrive/Desktop/KCL/DCDM/GROUP WORK 10/Group10/Group10/IMPC_cleaned_data.csv", 
                       stringsAsFactors = FALSE)
 
+#mutate the logpvalue for valid results
 #negative log transformation of pvalue for better visualisation of smaller p-values (stat sig)  
-IMPC_data$logpvalue <- -log10(IMPC_data$pvalue)
+#replaces infinite or missing values with 0 as pca graph would error
+IMPC_data <- IMPC_data %>%
+  mutate(logpvalue = -log10(pvalue), 
+         logpvalue = ifelse(
+           is.infinite(logpvalue) | #| = or
+             is.na(logpvalue), 
+           0, 
+           logpvalue))
+
+#produce a numerical matrix for our dataset (pca)
+#reshape wide matrix so parameter_name will be the columns with the pvalues
+IMPC_matrix <- IMPC_data %>%
+  select(gene_symbol, parameter_name, logpvalue) %>% #selecting what is in our matrix
+  pivot_wider(
+        names_from = parameter_name, #our columns
+        values_from = logpvalue, #our values
+        values_fn = mean, #makes sure each gene has one value per phenotype for when a gene has more than one value for the same phenotype
+        values_fill = 0 #fill in with 0 when gene doesnt have an effect on a phenotype 
+        ) %>%
+  column_to_rownames("gene_symbol") #to represent genes 
+
+
 
 #start of our UI - visuals and layouts
 #shinydashboard
@@ -42,9 +64,9 @@ ui <- dashboardPage(
   #created a sidebar that you can click on the different graphs 
   dashboardSidebar(
     sidebarMenu(
-      menuItem("Phenotypic Scores for KO Gene", tabName = "phenoKOgene", icon =icon("dashboard")),
-      menuItem("All Mice Scores for a Phenotype", tabName = "micescores", icon =icon("dashboard")),
-      menuItem("Gene Clusters", tabName = "3 Gene Clusters", icon =icon("dashboard"))
+      menuItem("Phenotypic Scores", tabName = "phenoKOgene", icon =icon("dashboard")),
+      menuItem("Mice Scores", tabName = "micescores", icon =icon("dashboard")),
+      menuItem("Gene Clusters", tabName = "geneclusters", icon =icon("dashboard"))
     )
   ),
   
@@ -54,6 +76,8 @@ ui <- dashboardPage(
         #tab for Phenotypic Scores for KO Gene
       tabItem(tabName = "phenoKOgene", #to link to the menuItem
               h2("Phenotypic Scores for KO Gene"), #header
+              p("Select a knockout mouse gene and visualise the statistical
+scores of all phenotypes tested with the scatter graph. Significant and non-significant -log10 P-values are shown. The red dotted line signifies the significance threshold. "),
               #dropdown for ko gene selection
               selectInput("gene",
                           "Select Gene Symbol:",
@@ -66,16 +90,34 @@ ui <- dashboardPage(
       
       tabItem(tabName = "micescores", #to link to the menuItem
               h2("All Mice Scores for a Phenotype"), #header
+              p("Select a phenotype and visualise the
+statistical scores of all knockout mice with the scatter graph. Significant and non-significant -log10 P-values are shown. The red dotted line signifies the significance threshold."),
               #dropdown for ko gene selection
               selectInput("phenotype",
                           "Select the Specfic Phenotype:",
                           choices = sort(unique(IMPC_data$parameter_name))),
               #our significant table 
+              h4(textOutput("sigtable2title")),
               tableOutput("sigtable2"),
               #our second plot 
-              plotlyOutput("p2_mouse", height ="750px"))
+              plotlyOutput("p2_mouse", height ="750px")
+              ),
+      tabItem(tabName = "geneclusters",
+              h2("Visualising Gene Clusters Based on Similar Phenotype Scores"),
+              p("Select principal components and visualise gene clusters based on their phenotype scores. 
+                This PCA plot shows how genes are grouped together with different colours that represent k-means clusters.
+                The loading table lists the top ten phenotypes that contribute towards a PC"),
+              fluidRow(
+                column(4, selectInput("pc_xaxis", "PC X-axis: ", choices = paste0("PC", 1:10), selected = "PC1")),
+                column(4, selectInput("pc_yaxis", "PC Y-axis: ", choices = paste0("PC", 1:10), selected = "PC2")),
+                column(4, sliderInput("kclusters", "Number of Clusters: ", min = 2, max = 10, value = 3))
+              ),
+              h4(textOutput("loadingtabletitle")),
+              tableOutput("loadingtable"),
+              plotlyOutput("p3_cluster", height ="750px")
       )
     )
+  )
 )
 #end of UI
 
@@ -143,6 +185,8 @@ server <- function(input, output) {
   caption.placement = "top",
   align = 'lr')#left to right: parameter_name then pvalue order in columns
   
+  
+  
   #2 All Mice Scores for a Phenotype
   #reactive - reruns the code based on input (parameterchosen)
   phenodf <- reactive({
@@ -197,20 +241,88 @@ server <- function(input, output) {
       select(gene_symbol, pvalue) %>% #our table headers
       arrange(pvalue) %>% #sort based on most signficant at the top 
       mutate(pvalue = sprintf("%.10f", pvalue)) #format pvalue to 10dp
-  },
-  caption = "Significant KO Genes(P-values (10dp) < 0.05)",
-  caption.placement = "top",
-  align = 'l')#left to right
+  })
+  
+  output$sigtable2title <-renderText({paste0("Significant KO Genes for ",input$phenotype)
+    })
   
   
+  #3 Gene Clusters
+  #reactive - reruns the code based on input (number of clusters, PCA, kmeans)
+  pcadata <- reactive({
+    
+    #scale the matrix to reduce biased clusters in the PCA
+    #all phenotypes can equally contribute to the PCA
+    scaled_matrix <- scale(IMPC_matrix, center = TRUE, scale = apply(IMPC_matrix, 2, mad))#mean absolute deviation 
+    #principal componenet anlysis on our scaled matrix
+    #making sure each column has mean 0 before PCA 
+    pca <- prcomp(scaled_matrix, center = TRUE, scale. = FALSE)#False as we previously scaled with MAD
+   
+    pca_scores <- as.data.frame(pca$x[,1:10]) #PCA scores for first 10 pcs
+    
+    #k-means clustering
+    #ensures reproducibility, no random cluster start
+    #new column in pca_scores and converts into factor for plotting colours
+    set.seed(123)
+    pca_scores$Cluster <- factor(kmeans(pca_scores[,1:10], centers = input$kclusters)$cluster)
+    
+    list(pca = pca, pca_scores = pca_scores)
+  })
   
+  #generating our cluster plot
+  output$p3_cluster <- renderPlotly({
+    df3 <- pcadata()$pca_scores #retrieves inputs
+    pc_x <- input$pc_xaxis
+    pc_y <- input$pc_yaxis
+    
+    
+    #how much total variability is in each PC
+    # uses the proportion of variance row name inside the pca summary to display on pca axis
+    var_pc <- summary(pcadata()$pca)$importance["Proportion of Variance",]
+    vx <- paste0(sprintf("%.2f", var_pc[as.numeric(sub("PC","",pc_x))]*100), "%")
+    vy <- paste0(sprintf("%.2f", var_pc[as.numeric(sub("PC","",pc_y))]*100), "%")
+    
+    plot_ly(df3,
+            x = ~get(pc_x),
+            y = ~get(pc_y),
+            type = "scatter",
+            mode = "markers",
+            color = ~Cluster,
+            marker = list(size = 10),
+            #hover- what it shows when user hovers over a point
+            text = ~paste0("Gene: ", rownames(df),
+                           "<br>Cluster: ", Cluster,
+                           "<br>", pc_x, ": ", sprintf("%.3f", get(pc_x)),
+                           "<br>", pc_y, ": ", sprintf("%.3f", get(pc_y))),
+            #text to be inserted into hover
+            hoverinfo = "text") %>%
+      layout(title = paste("PCA of Genes: ", pc_x, "vs", pc_y),
+             xaxis = list(title = paste0(pc_x, " (", vx, ")")),
+             yaxis = list(title = paste0(pc_y, " (", vy, ")")))
+  })
   
+  #create our PCA loading table that tells the top 10 phenotypes contributing to the PC
   
-  }
+  output$loadingtable <- renderTable({
+    res <- pcadata()
+    pc_index <- as.numeric(sub("PC","", input$pc_xaxis))
+    data.frame(Phenotype = rownames(res$pca$rotation),
+               Loading = res$pca$rotation[, pc_index]) %>%
+      mutate(AbsLoading = abs(Loading)) %>%
+      arrange(desc(AbsLoading)) %>%
+      head(10) %>%
+      select(Phenotype, Loading)
+  })
+  
+  output$loadingtabletitle <- renderText({ paste0("Top Phenotypes that influence ", input$pc_xaxis) })
+  
+}
 #end of server
 
 #launch Shiny application 
 shinyApp(ui = ui, server = server)
+
+
 
 
 
