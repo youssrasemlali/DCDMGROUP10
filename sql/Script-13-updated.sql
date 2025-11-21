@@ -561,10 +561,42 @@ select * from Genes where gene_symbol = 'EYA3';
 select * from disease_ontology where DO_disease_id = 'DOID:0112248'
 
 
+-- View all gene accession IDs
+SELECT gene_accession_id
+FROM Genes
+ORDER BY gene_accession_id;
+
+-- View all genes with their symbols
+SELECT 
+    gene_id,
+    gene_accession_id,
+    gene_symbol
+FROM Genes
+ORDER BY gene_symbol;
+
+-- View gene accession IDs with all their tested parameters
+SELECT 
+    g.gene_accession_id,
+    g.gene_symbol,
+    p.parameterId,
+    p.parameter_name,
+    pa.pvalue,
+    pa.mouse_strain,
+    pa.life_stage
+FROM Genes g
+INNER JOIN Phenotype_analyses pa ON pa.gene_id = g.gene_id
+INNER JOIN Parameters p ON p.parameter_id = pa.parameter_id
+ORDER BY g.gene_accession_id, p.parameter_name;
 
 
-
-
-
-
-
+SELECT 
+    g.gene_accession_id,
+    g.gene_symbol,
+    p.parameter_name,
+    pa.pvalue,
+    pa.life_stage
+FROM Genes g
+INNER JOIN Phenotype_analyses pa ON pa.gene_id = g.gene_id
+INNER JOIN Parameters p ON p.parameter_id = pa.parameter_id
+WHERE pa.pvalue < 0.05
+ORDER BY g.gene_accession_id, pa.pvalue;
