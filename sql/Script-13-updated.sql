@@ -49,7 +49,25 @@ DROP TEMPORARY TABLE temp_genes;
 -- check
 select * from Genes;
 
-#TRUNCATE table Genes;
+-- DISEASES
+
+-- create a staging table
+CREATE TABLE IF NOT EXISTS DI_stage (
+    DO_disease_id VARCHAR(200),
+    DO_disease_name VARCHAR(500),
+    OMIM_IDs TEXT,
+    gene_accession VARCHAR(200)
+);
+
+#loaded the csv file into 
+LOAD DATA INFILE 'C:/ProgramData/MySQL/MySQL Server 8.0/Uploads/DI_clean_updated.csv'
+INTO TABLE DI_stage
+FIELDS TERMINATED BY ','
+ENCLOSED BY '"'
+LINES TERMINATED BY '\n'
+IGNORE 1 rows
+(DO_disease_id, DO_disease_name, OMIM_IDs, gene_accession);
+
 
 
 -- stores human disease
@@ -65,18 +83,16 @@ create table Disease_ontology(
  modify column OMIM_IDs TEXT;
 
 
-load data infile 'C:/ProgramData/MySQL/MySQL Server 8.0/Uploads/DI_clean_updated.csv'
-INTO table Disease_ontology
-FIELDS terminated by ','
-enclosed by '"'
-lines terminated by '\n'
-IGNORE 1 ROWS
-(@col1, @col2, @col3, @col4)
-SET
-	DO_disease_id = @col1,
-	DO_disease_name = @col2,
-	OMIM_IDs = @col3;
-
+-- Insert only DISTINCT diseases
+INSERT INTO Disease_ontology (DO_disease_id, DO_disease_name, OMIM_IDs)
+SELECT DISTINCT
+    DO_disease_id,
+    DO_Disease_name,
+    OMIM_IDs
+FROM DI_stage
+WHERE DO_disease_id IS NOT NULL
+    AND DO_disease_id != ''
+ORDER BY DO_disease_id;
 
 
 select * from Disease_ontology
@@ -96,29 +112,6 @@ create table Gene_disease_association (
 	UNIQUE KEY unique_gene_disease (gene_id, Disease_id)
 );
 
--- create a staging table
-CREATE TABLE IF NOT EXISTS DI_stage (
-    DO_disease_id VARCHAR(200),
-    DO_disease_name VARCHAR(500),
-    OMIM_IDs TEXT,
-    gene_accession VARCHAR(200)
-);
-
-#loaded the csv file into 
-LOAD DATA INFILE 'C:/ProgramData/MySQL/MySQL Server 8.0/Uploads/DI_clean_updated.csv'
-INTO TABLE DI_stage
-FIELDS TERMINATED BY ','
-ENCLOSED BY '"'
-LINES TERMINATED BY '\n'
-IGNORE 1 rows
-(@col1, @col2, @col3, @col4)
-set 
-	DO_disease_id = @col1,
-	DO_disease_name = @col2,
-	OMIM_IDs = @col3,
-	gene_accession = @col4;
-
-
 
 INSERT INTO Gene_disease_association (gene_id, Disease_id)
 SELECT 
@@ -137,7 +130,7 @@ WHERE s.gene_accession  IS NOT NULL
 
 -- example queries
 
-select count(*) from Gene_disease_association
+select count(*) from Gene_disease_association;
 	
 SELECT 
     g.gene_symbol,
@@ -170,6 +163,7 @@ CREATE TABLE temp_procedures (
     is_mandatory VARCHAR(10),
     impc_parameter_id INT
 );
+
 LOAD DATA LOCAL INFILE 'C:/ProgramData/MySQL/MySQL Server 8.0/Uploads/IMPC_procedure_clean.csv'
 INTO TABLE temp_procedures
 FIELDS TERMINATED BY ',' 
@@ -554,7 +548,7 @@ FROM Genes
 GROUP BY gene_accession_id
 HAVING COUNT(*) > 1;
 
-SELECT * FROM Genes LIMIT 20;
+SELECT * FROM Genes;
 
 select * from Genes where gene_symbol = 'EYA3';
 
@@ -572,6 +566,7 @@ SELECT
     gene_accession_id,
     gene_symbol
 FROM Genes
+where gene_symbol = 'Nfkb1'
 ORDER BY gene_symbol;
 
 -- View gene accession IDs with all their tested parameters
@@ -589,6 +584,7 @@ INNER JOIN Parameters p ON p.parameter_id = pa.parameter_id
 ORDER BY g.gene_accession_id, p.parameter_name;
 
 
+-- command to be able to view gene with signficantly affected parameters
 SELECT 
     g.gene_accession_id,
     g.gene_symbol,
@@ -600,3 +596,55 @@ INNER JOIN Phenotype_analyses pa ON pa.gene_id = g.gene_id
 INNER JOIN Parameters p ON p.parameter_id = pa.parameter_id
 WHERE pa.pvalue < 0.05
 ORDER BY g.gene_accession_id, pa.pvalue;
+
+
+SELECT 
+g.gene_symbol,
+g.gene_accession_id,
+
+-- phenotype analysis
+pa.analysis_id,
+pa.pvalue,
+pa.mouse_strain,
+pa.life_stage,
+
+-- parameter-level info
+p.parameterId,
+p.parameter_name,
+
+-- grouping info
+pg.group_name AS parameter_group,
+
+-- procedure info
+pr.procedure_name,
+
+-- disease associations
+d.DO_disease_id,
+d.DO_disease_name,
+d.OMIM_IDs
+
+FROM Phenotype_analyses pa
+JOIN Genes g 
+ON pa.gene_id = g.gene_id
+JOIN Parameters p 
+ON pa.parameter_id = p.parameter_id
+JOIN Procedures pr 
+ON p.procedure_id = pr.procedure_id
+LEFT JOIN parameter_group_linking pgl
+ON p.parameter_id = pgl.parameter_id
+LEFT JOIN parameter_groupings pg
+ON pg.group_id = pgl.group_id
+LEFT JOIN Gene_disease_association gda
+ON gda.gene_id = g.gene_id
+LEFT JOIN Disease_ontology d
+ON d.Disease_id = gda.Disease_id
+
+WHERE g.gene_accession_id = 'MGI:1919762'
+ORDER BY pa.pvalue ASC;
+
+
+select * from parameter_group_linking pgl;
+
+select * from parameters p where p.parameter_id = '3';
+
+select * from disease_ontology where DO_disease_name ='Acute myeloid leukemia';
