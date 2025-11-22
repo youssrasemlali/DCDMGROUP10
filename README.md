@@ -18,9 +18,7 @@ Interactive Dashboard:
 
 ## Repository structure
 
-`Group10/`
-
-- `data/` unprocessed raw data files
+`Group10/data/` -> unprocessed raw data files
   
 
 `meta_data/`
