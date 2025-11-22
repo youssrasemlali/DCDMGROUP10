@@ -93,7 +93,7 @@ ui <- dashboardPage(skin = "purple",
                         tabItem(tabName = "phenoKOgene",
                                 h2("Phenotypic Scores for KO Gene"),
                                 p("Select a knockout mouse gene and visualise the statistical
-scores of all phenotypes tested with the scatter graph. Significant and non-significant -log10 P-values are shown. The red dotted line signifies the significance threshold."),
+scores of all phenotypes tested with the scatter graph. Significant and non-significant -log10 P-values are shown. The red dotted line signifies the significance threshold (P-value <0.05)."),
                                 br(),
                                 fluidRow(
                                   column(6, selectInput("gene",
@@ -108,7 +108,7 @@ scores of all phenotypes tested with the scatter graph. Significant and non-sign
                         tabItem(tabName = "micescores",
                                 h2("All Mice Scores for a Phenotype"),
                                 p("Select a phenotype and visualise the
-statistical scores of all knockout mice with the scatter graph. Significant and non-significant -log10 P-values are shown. The red dotted line signifies the significance threshold."),
+statistical scores of all knockout mice with the scatter graph. Significant and non-significant -log10 P-values are shown. The red dotted line signifies the significance threshold (P-value <0.05)."),
                                 br(),
                                 fluidRow(
                                   column(6, selectInput("phenotype",
@@ -157,8 +157,8 @@ server <- function(input, output) {
                               labels = c("Not Significant", "Significant"))
     
     plot_ly(data = df1, 
-            x = ~parameter_name,
-            y = ~logpvalue,
+            x = ~logpvalue,
+            y = ~parameter_name,
             type = "scatter",
             mode = "markers",
             marker = list(size = 10),
@@ -171,16 +171,16 @@ server <- function(input, output) {
     ) %>%
       layout(
         title = paste("Phenotypic Scores for:", input$gene),
-        yaxis = list(title = "-log10(P-value)"),
-        xaxis = list(title = "Phenotype"),
+        yaxis = list(title = "Phenotype"),
+        xaxis = list(title = "-log10(P-value)"),
         shapes = list(
           type = "line",
-          y0 = -log10(0.05),
-          y1 = -log10(0.05),
-          x0 = 0,
-          x1 = 1,
-          yref = "y",
-          xref = "paper",
+          x0 = -log10(0.05),
+          x1 = -log10(0.05),
+          y0 = 0,
+          y1 = 1,
+          xref = "y",
+          yref = "paper",
           line = list(color = "red", dash = "dash")
         )
       )
@@ -213,8 +213,8 @@ server <- function(input, output) {
                               labels = c("Not Significant", "Significant"))
     
     plot_ly(data = df2, 
-            x = ~gene_symbol,
-            y = ~logpvalue,
+            y = ~gene_symbol,
+            x = ~logpvalue,
             type = "scatter",
             mode = "markers",
             marker = list(size = 10),
@@ -226,16 +226,16 @@ server <- function(input, output) {
     ) %>%
       layout(
         title = paste("All P-Value Scores for the Phenotype:", input$phenotype),
-        yaxis = list(title = "-log10(P-value)"),
-        xaxis = list(title = "KO Gene"),
+        yaxis = list(title = "KO Gene"),
+        xaxis = list(title = "-log10(P-value)"),
         shapes = list(
           list(type = "line",
-               y0 = -log10(0.05),
-               y1 = -log10(0.05),
-               x0 = 0, 
-               x1 = 1,
-               yref = "y", 
-               xref = "paper",
+               x0 = -log10(0.05),
+               x1 = -log10(0.05),
+               y0 = 0, 
+               y1 = 1,
+               xref = "y", 
+               yref = "paper",
                line = list(color = "red", dash = "dash"))
         )
       )
@@ -311,5 +311,6 @@ server <- function(input, output) {
 
 # LAUNCH SHINY APPLICATION 
 shinyApp(ui = ui, server = server)
+
 
 
