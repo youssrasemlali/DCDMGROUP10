@@ -3,15 +3,21 @@ title: "Final script for cleaning DI"
 format: html
 ---
 ```{r}
+#Load in relevant libraries
 library("dplyr")
 library("tidyverse")
 ```
 ```{r}
+
+#Load in and read disease information.txt
+
 data <-read.delim("disease_information.txt", header = TRUE, stringsAsFactors = FALSE)
 
+#looking at data structure
 head(data)
 ```
 ```{r}
+#check the dimensions and for missing values
 dim(data)
 nrow(data)
 ncol(data)
@@ -33,6 +39,7 @@ all(grepl("^MGI", data$Mouse.MGI.ID))
 ```
 
 ```{r}
+# Rename the column names to remove (.) and replace with (_)
 data <- data %>% 
   rename(OMIM_IDs = OMIM.IDs)
 data <- data %>% 
@@ -46,10 +53,12 @@ colnames(data)
 head(data)
 ```
 ```{r}
+#Count how many rows have multiple OMID IDs
 multiple_omims <- sum(grepl("\\|", data$OMIM_IDs))
 cat("Rows with multiple OMIM IDs:", multiple_omims, "\n\n")
 ```
 ```{r}
+#Data quality checks for OMIM, disease, and mouse gene identifiers
 cat("Any missing OMIM_IDs:", sum(is.na(data$OMIM_IDs)), "\n")
 cat("Any empty OMIM_IDs:", sum(data$OMIM_IDs == ""), "\n")
 cat("Unique OMIM IDs:", n_distinct(data$OMIM_IDs), "\n")
@@ -60,4 +69,5 @@ cat("Unique mouse genes:", n_distinct(data$Mouse_MGI_ID), "\n")
 output_file <- "DI_clean_updated.csv"
 write_csv(data, output_file)
 ```
+
 
