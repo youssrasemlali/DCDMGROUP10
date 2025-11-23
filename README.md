@@ -19,6 +19,15 @@ Interactive Dashboard:
 ## Repository structure
 
 `Group10/data/` -> unprocessed raw data files
+
+`Scripts/`
+
+- `Cleaning_according_to_SOP.qmd` ->  Cleans collated data according to SOP constraints
+- `clean_impc_parameters.qmd` -> Cleans parameters file to ensure compatibility with the database schema
+- `clean_impc_procedure.qmd` -> Cleans procedure file to ensure compatibility with the database schema
+- `collating_raw_data_script.qmd` -> data collation checkig data types for each column and merging data into unified dataframe
+- `disease_info_clean_updated_script.qmd` -> Cleans disease information file to ensure compatibility with the database schema
+
   
 
 `meta_data/`
