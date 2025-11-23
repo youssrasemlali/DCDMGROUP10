@@ -58,12 +58,10 @@ print(paste("Successfully loaded", nrow(IMPC_data), "rows from database"))
 
 # Mutate the logpvalue for valid results
 IMPC_data <- IMPC_data %>%
-  mutate(logpvalue = -log10(pvalue), 
-         logpvalue = ifelse(
-           is.infinite(logpvalue) | 
-             is.na(logpvalue), 
-           0, 
-           logpvalue))
+  mutate(
+    capped_pvalue = ifelse(pvalue < 1e-10, 1e-10, pvalue),
+    logpvalue = -log10(capped_pvalue)
+  )
 
 # Produce a numerical matrix for our dataset (pca)
 IMPC_matrix <- IMPC_data %>%
@@ -311,6 +309,7 @@ server <- function(input, output) {
 
 # LAUNCH SHINY APPLICATION 
 shinyApp(ui = ui, server = server)
+
 
 
 
