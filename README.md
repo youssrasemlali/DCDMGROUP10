@@ -30,11 +30,12 @@ Interactive Dashboard:
 
 `rshiny/`
 
-- `app.R` -> rshiny script producing visualisations 
+- `impc_app.R` -> rshiny script producing visualisations 
 
 
 `sql/`
 
+- `IMPC_phenotype_db_dump.sql` -> database dump
 - `Script-13-updated.sql` -> script creating database tables and populating tables
 - `impc_phenotype_db.png` -> SQL database
 
