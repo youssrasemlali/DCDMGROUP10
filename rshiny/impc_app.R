@@ -89,37 +89,41 @@ ui <- dashboardPage(skin = "purple",
                     dashboardBody( 
                       tabItems(
                         tabItem(tabName = "phenoKOgene",
-                                h2("Phenotypic Scores for KO Gene"),
+                                h2("Phenotypic Scores for KO Gene", align = "center"),
                                 p("Select a knockout mouse gene and visualise the statistical
 scores of all phenotypes tested with the scatter graph. Significant and non-significant -log10 P-values are shown. The red dotted line signifies the significance threshold (P-value <0.05)."),
                                 br(),
                                 fluidRow(
-                                  column(6, selectInput("gene",
+                                  column(6, offset =1, selectInput("gene",
                                                         "Select Gene Symbol:",
                                                         choices = sort(unique(IMPC_data$gene_symbol)))),
-                                  column(6, h4(textOutput("sigtable1title")),
+                                  column(5, h4(textOutput("sigtable1title")),
                                          tableOutput("sigtable"))),
                                 br(),
-                                plotlyOutput("p1_gene", height = "750px")
+                                fluidRow(
+                                  column(width = 10, offset = 1, 
+                                plotlyOutput("p1_gene", height = "500px")))
                         ),
                         
                         tabItem(tabName = "micescores",
-                                h2("All Mice Scores for a Phenotype"),
+                                h2("All Mice Scores for a Phenotype", align = "center"),
                                 p("Select a phenotype and visualise the
 statistical scores of all knockout mice with the scatter graph. Significant and non-significant -log10 P-values are shown. The red dotted line signifies the significance threshold (P-value <0.05)."),
                                 br(),
                                 fluidRow(
-                                  column(6, selectInput("phenotype",
+                                  column(6, offset =1, selectInput("phenotype",
                                                         "Select the Specific Phenotype:",
                                                         choices = sort(unique(IMPC_data$parameter_name)))),
-                                  column(6, h4(textOutput("sigtable2title")),
+                                  column(5, h4(textOutput("sigtable2title")),
                                          tableOutput("sigtable2"))),
                                 br(),
-                                plotlyOutput("p2_mouse", height = "750px")
+                                fluidRow(
+                                  column(width = 10, offset = 1, 
+                                plotlyOutput("p2_mouse", height = "500px")))
                         ),
                         
                         tabItem(tabName = "geneclusters",
-                                h2("Visualising Gene Clusters Based on Similar Phenotype Scores"),
+                                h2("Visualising Gene Clusters Based on Similar Phenotype Scores", align = "center"),
                                 p("Select principal components and visualise gene clusters based on their phenotype scores. 
                 This PCA plot shows how genes are grouped together with different colours that represent k-means clusters.
                 The loading table lists the top ten phenotypes that contribute towards a PC"),
@@ -134,7 +138,7 @@ statistical scores of all knockout mice with the scatter graph. Significant and 
                                   column(3, h4(textOutput("loadingtabletitle")),
                                          tableOutput("loadingtable")),
                                   column(9,
-                                         plotlyOutput("p3_cluster", height = "750px")))
+                                         plotlyOutput("p3_cluster", height = "500px")))
                         )
                       )
                     )
@@ -309,6 +313,7 @@ server <- function(input, output) {
 
 # LAUNCH SHINY APPLICATION 
 shinyApp(ui = ui, server = server)
+
 
 
 
