@@ -49,3 +49,33 @@ Interactive Dashboard:
 - `impc_phenotype_db.png` -> SQL database
 
 
+## Data processing pipeline
+
+### Data Collation → `collating_raw_data_script.qmd`
+
+- Merges multiple IMPC data files
+- Validates data types and consistency
+
+### SOP Compliance Cleaning → `Cleaning_according_to_SOP.qmd`
+
+- Applies IMPC Standard Operating Procedures
+- Ensures data quality standards
+
+### Parameter & Procedure cleaning and Disease Information processing 
+
+- `clean_impc_parameters.qmd` - Processes phenotype parameters
+- `clean_impc_procedure.qmd` - Handles experimental procedures
+- `disease_info_clean_updated_script.qmd` - Integrates Phenodigm disease associations & links mouse phenotypes to human diseases
+
+## Database Implementation
+
+- MySQL Database: Relational database storing processed IMPC data
+- Schema Design: Optimised for complex genotype-phenotype queries
+- Data Integrity: Referential constraints and validation rules
+
+## Visualisation Dashboard
+The RShiny application `impc_app.R`provides:
+
+- Interactive exploration of phenotype data
+- Gene similarity clustering based on phenotype scores
+- Filtering and visualisation capabilities
