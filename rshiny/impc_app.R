@@ -164,7 +164,7 @@ server <- function(input, output) {
             marker = list(size = 10),
             color = ~significant,
             hovertemplate = paste(
-              "<b>Phenotype:</b> %{x}<br>",
+              "<b>Phenotype:</b> %{y}<br>",
               "<b>P-value:</b> %{text}<br><extra></extra>"
             ),
             text = ~sprintf("%.10f", pvalue)
@@ -311,6 +311,7 @@ server <- function(input, output) {
 
 # LAUNCH SHINY APPLICATION 
 shinyApp(ui = ui, server = server)
+
 
 
 
