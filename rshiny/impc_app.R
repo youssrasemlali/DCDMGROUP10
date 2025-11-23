@@ -102,7 +102,7 @@ scores of all phenotypes tested with the scatter graph. Significant and non-sign
                                 br(),
                                 fluidRow(
                                   column(width = 10, offset = 1, 
-                                plotlyOutput("p1_gene", height = "500px")))
+                                plotlyOutput("p1_gene", height = "600px")))
                         ),
                         
                         tabItem(tabName = "micescores",
@@ -119,7 +119,7 @@ statistical scores of all knockout mice with the scatter graph. Significant and 
                                 br(),
                                 fluidRow(
                                   column(width = 10, offset = 1, 
-                                plotlyOutput("p2_mouse", height = "500px")))
+                                plotlyOutput("p2_mouse", height = "600px")))
                         ),
                         
                         tabItem(tabName = "geneclusters",
@@ -138,7 +138,7 @@ statistical scores of all knockout mice with the scatter graph. Significant and 
                                   column(3, h4(textOutput("loadingtabletitle")),
                                          tableOutput("loadingtable")),
                                   column(9,
-                                         plotlyOutput("p3_cluster", height = "500px")))
+                                         plotlyOutput("p3_cluster", height = "600px")))
                         )
                       )
                     )
@@ -313,6 +313,7 @@ server <- function(input, output) {
 
 # LAUNCH SHINY APPLICATION 
 shinyApp(ui = ui, server = server)
+
 
 
 
