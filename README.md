@@ -18,6 +18,13 @@ Interactive Dashboard:
 
 ## Repository structure
 
+`Clean data` 
+- `DI_clean.csv` 
+- `IMPC_cleaned_data.csv`
+- `IMPC_parameter_description_clean.csv`
+- `IMPC_procedure_clean.csv`
+- `collated_raw_impc_data.csv` 
+
 `Group10/data/` -> unprocessed raw data files
 
 `Scripts/`
@@ -45,7 +52,7 @@ Interactive Dashboard:
 `sql/`
 
 - `IMPC_phenotype_db_dump.sql` -> database dump
-- `Script-13-updated.sql` -> script creating database tables and populating tables
+- `SQLScript.sql` -> script creating database tables and populating tables
 - `impc_phenotype_db.png` -> SQL database
 
 
