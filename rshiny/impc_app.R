@@ -5,7 +5,7 @@ install.packages("shiny")
 install.packages("poltly")
 install.packages("tibble")
 install.packages("dplyr")
-install.packages("shinydashbaord")
+install.packages("shinydashboard")
 
 
 # Load libraries
@@ -313,6 +313,7 @@ server <- function(input, output) {
 
 # LAUNCH SHINY APPLICATION 
 shinyApp(ui = ui, server = server)
+
 
 
 
