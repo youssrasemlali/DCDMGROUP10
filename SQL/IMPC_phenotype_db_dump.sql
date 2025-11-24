@@ -28,7 +28,7 @@ CREATE TABLE `disease_ontology` (
   `DO_disease_name` varchar(500) NOT NULL,
   `OMIM_IDs` text,
   PRIMARY KEY (`Disease_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2048 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2048 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -57,7 +57,7 @@ CREATE TABLE `gene_disease_association` (
   KEY `Disease_id` (`Disease_id`),
   CONSTRAINT `gene_disease_association_ibfk_1` FOREIGN KEY (`gene_id`) REFERENCES `genes` (`gene_id`),
   CONSTRAINT `gene_disease_association_ibfk_2` FOREIGN KEY (`Disease_id`) REFERENCES `disease_ontology` (`Disease_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=32 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=32 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -83,7 +83,7 @@ CREATE TABLE `genes` (
   `gene_symbol` varchar(100) NOT NULL,
   PRIMARY KEY (`gene_id`),
   UNIQUE KEY `gene_accession_id` (`gene_accession_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=128 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=128 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -112,7 +112,7 @@ CREATE TABLE `parameter_group_linking` (
   KEY `group_id` (`group_id`),
   CONSTRAINT `parameter_group_linking_ibfk_1` FOREIGN KEY (`parameter_id`) REFERENCES `parameters` (`parameter_id`),
   CONSTRAINT `parameter_group_linking_ibfk_2` FOREIGN KEY (`group_id`) REFERENCES `parameter_groupings` (`group_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=1480 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1480 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -138,7 +138,7 @@ CREATE TABLE `parameter_groupings` (
   `group_description` text,
   PRIMARY KEY (`group_id`),
   UNIQUE KEY `group_name` (`group_name`)
-) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -168,7 +168,7 @@ CREATE TABLE `parameters` (
   PRIMARY KEY (`parameter_id`),
   KEY `procedure_id` (`procedure_id`),
   CONSTRAINT `parameters_ibfk_1` FOREIGN KEY (`procedure_id`) REFERENCES `procedures` (`procedure_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=8192 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=8192 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -200,7 +200,7 @@ CREATE TABLE `phenotype_analyses` (
   KEY `parameter_id` (`parameter_id`),
   CONSTRAINT `phenotype_analyses_ibfk_1` FOREIGN KEY (`gene_id`) REFERENCES `genes` (`gene_id`),
   CONSTRAINT `phenotype_analyses_ibfk_2` FOREIGN KEY (`parameter_id`) REFERENCES `parameters` (`parameter_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -228,7 +228,7 @@ CREATE TABLE `procedures` (
   `is_mandatory` tinyint(1) DEFAULT '0',
   `impc_parameter_id` int DEFAULT NULL,
   PRIMARY KEY (`procedure_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=8192 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=8192 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -251,3 +251,4 @@ UNLOCK TABLES;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
 -- Dump completed on 2025-11-24 17:34:54
+
